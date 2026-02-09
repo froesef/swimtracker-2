@@ -1,33 +1,15 @@
 import { loadScript } from '../../scripts/aem.js';
+import { filterPoolsBySeason } from '../../scripts/season.js';
 
 /**
- * Pool chart colors matching CSS custom properties.
+ * Read pool chart colors from CSS custom properties.
+ * @returns {string[]}
  */
-const POOL_COLORS = [
-  '#2196f3', '#4caf50', '#ff9800', '#e91e63', '#9c27b0', '#00bcd4',
-];
-
-/**
- * Winter-only pool IDs (indoor pools available Oct-Apr).
- */
-const WINTER_POOLS = new Set(['SSD-4', 'SSD-6', 'SSD-7']);
-
-/**
- * Determine if we should filter to winter (indoor-only) pools.
- */
-function isWinterSeason() {
-  const month = new Date().getMonth() + 1;
-  return month >= 10 || month <= 4;
-}
-
-/**
- * Filter history data based on current season.
- */
-function filterBySeason(data) {
-  if (isWinterSeason()) {
-    return data.filter((r) => WINTER_POOLS.has(r.pool_id));
-  }
-  return data;
+function getPoolColors() {
+  const style = getComputedStyle(document.documentElement);
+  return [1, 2, 3, 4, 5, 6].map(
+    (i) => style.getPropertyValue(`--color-pool-${i}`).trim() || '#999',
+  );
 }
 
 /**
@@ -152,59 +134,89 @@ function createChart(canvas, datasets, yLabel, yMax) {
 }
 
 /**
+ * Show or clear the error message element.
+ */
+function showError(block, message) {
+  let el = block.querySelector('.chart-error');
+  if (!message) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('p');
+    el.className = 'chart-error';
+    block.insertBefore(el, block.querySelector('.chart-container'));
+  }
+  el.textContent = message;
+}
+
+/**
+ * Build datasets from grouped pool data with current theme colors.
+ */
+function buildDatasets(pools, poolIds, field) {
+  const colors = getPoolColors();
+  return poolIds.map((uid, i) => ({
+    label: pools[uid].name,
+    data: pools[uid][field],
+    borderColor: colors[i % colors.length],
+    backgroundColor: `${colors[i % colors.length]}20`,
+    fill: false,
+    tension: 0.3,
+    pointRadius: 2,
+  }));
+}
+
+/**
  * Fetch history data and update charts.
+ * Uses in-place chart.update() instead of destroy/recreate.
  */
 async function updateCharts(apiUrl, hours, state) {
+  if (state.isUpdating) return;
+  state.isUpdating = true;
+
   try {
     const resp = await fetch(`${apiUrl}/api/history?hours=${hours}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
 
-    const filtered = filterBySeason(data);
+    const filtered = filterPoolsBySeason(data);
     const pools = groupByPool(filtered);
     const poolIds = Object.keys(pools);
 
-    // Build datasets
-    const visitorDatasets = poolIds.map((uid, i) => ({
-      label: pools[uid].name,
-      data: pools[uid].visitors,
-      borderColor: POOL_COLORS[i % POOL_COLORS.length],
-      backgroundColor: `${POOL_COLORS[i % POOL_COLORS.length]}20`,
-      fill: false,
-      tension: 0.3,
-      pointRadius: 2,
-    }));
+    const visitorDatasets = buildDatasets(pools, poolIds, 'visitors');
+    const percentDatasets = buildDatasets(pools, poolIds, 'percent');
 
-    const percentDatasets = poolIds.map((uid, i) => ({
-      label: pools[uid].name,
-      data: pools[uid].percent,
-      borderColor: POOL_COLORS[i % POOL_COLORS.length],
-      backgroundColor: `${POOL_COLORS[i % POOL_COLORS.length]}20`,
-      fill: false,
-      tension: 0.3,
-      pointRadius: 2,
-    }));
+    if (state.visitorsChart) {
+      state.visitorsChart.data.datasets = visitorDatasets;
+      state.visitorsChart.update();
+    } else {
+      state.visitorsChart = createChart(
+        state.visitorsCanvas,
+        visitorDatasets,
+        'Number of Visitors',
+        undefined,
+      );
+    }
 
-    // Destroy existing charts
-    if (state.visitorsChart) state.visitorsChart.destroy();
-    if (state.percentChart) state.percentChart.destroy();
+    if (state.percentChart) {
+      state.percentChart.data.datasets = percentDatasets;
+      state.percentChart.update();
+    } else {
+      state.percentChart = createChart(
+        state.percentCanvas,
+        percentDatasets,
+        'Occupancy %',
+        100,
+      );
+    }
 
-    // Create new charts
-    state.visitorsChart = createChart(
-      state.visitorsCanvas,
-      visitorDatasets,
-      'Number of Visitors',
-      undefined,
-    );
-    state.percentChart = createChart(
-      state.percentCanvas,
-      percentDatasets,
-      'Occupancy %',
-      100,
-    );
+    showError(state.block, null);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to fetch pool history:', err);
+    showError(state.block, 'Unable to load chart data. Please try again later.');
+  } finally {
+    state.isUpdating = false;
   }
 }
 
@@ -224,6 +236,8 @@ export default async function decorate(block) {
     percentChart: null,
     visitorsCanvas: null,
     percentCanvas: null,
+    isUpdating: false,
+    block,
   };
 
   let currentHours = defaultHours;
@@ -261,6 +275,9 @@ export default async function decorate(block) {
   await loadScript('https://cdn.jsdelivr.net/npm/chart.js');
   await loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js');
   await updateCharts(apiUrl, currentHours, state);
+
+  // Re-render when season changes
+  document.addEventListener('season-change', () => updateCharts(apiUrl, currentHours, state));
 
   // Auto-refresh every 60 seconds
   setInterval(() => updateCharts(apiUrl, currentHours, state), 60 * 1000);

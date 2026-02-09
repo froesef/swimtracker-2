@@ -46,6 +46,15 @@
   height: 400px;
 }
 
+.pool-chart .chart-error {
+  background: #fce4ec;
+  color: #c62828;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 4px;
+  font-size: var(--body-font-size-s);
+  margin-bottom: var(--spacing-md);
+}
+
 @media (max-width: 768px) {
   .pool-chart .chart-wrapper {
     height: 300px;

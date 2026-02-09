@@ -1,30 +1,4 @@
-/**
- * Winter-only pool IDs (indoor pools available Oct-Apr)
- */
-const WINTER_POOLS = new Set(['SSD-4', 'SSD-6', 'SSD-7']);
-
-/**
- * Determine if we should filter to winter (indoor-only) pools.
- * Winter = October through April.
- * @returns {boolean}
- */
-function isWinterSeason() {
-  const month = new Date().getMonth() + 1; // 1-12
-  return month >= 10 || month <= 4;
-}
-
-/**
- * Filter pools based on current season.
- * In winter, only show indoor pools. In summer, show all.
- * @param {Array} pools
- * @returns {Array}
- */
-function filterBySeason(pools) {
-  if (isWinterSeason()) {
-    return pools.filter((p) => WINTER_POOLS.has(p.pool_id));
-  }
-  return pools;
-}
+import { filterPoolsBySeason } from '../../scripts/season.js';
 
 /**
  * Build a pool card element.
@@ -77,7 +51,7 @@ async function renderPoolStatus(block, apiUrl) {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
 
-    const pools = filterBySeason(data);
+    const pools = filterPoolsBySeason(data);
     if (pools.length === 0) {
       grid.innerHTML = '<p class="pool-status-empty">No pool data available. Pools may be closed for the season.</p>';
       return;
@@ -110,6 +84,9 @@ export default async function decorate(block) {
 
   // Initial render
   await renderPoolStatus(block, apiUrl);
+
+  // Re-render when season changes
+  document.addEventListener('season-change', () => renderPoolStatus(block, apiUrl));
 
   // Auto-refresh every 60 seconds
   setInterval(() => renderPoolStatus(block, apiUrl), 60 * 1000);

@@ -69,6 +69,39 @@ header .header-brand {
   text-decoration: none;
 }
 
+/* season toggle */
+header .season-toggle {
+  margin-left: auto;
+  display: flex;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255 255 255 / 40%);
+}
+
+header .season-toggle button {
+  padding: 4px 12px;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255 255 255 / 70%);
+  font-size: var(--body-font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+header .season-toggle button:hover {
+  background: rgba(255 255 255 / 15%);
+  color: var(--color-white);
+}
+
+header .season-toggle button.active {
+  background: rgba(255 255 255 / 25%);
+  color: var(--color-white);
+  font-weight: 700;
+}
+
 @media (max-width: 768px) {
   header .nav-sections {
     display: none;

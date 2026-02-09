@@ -13,6 +13,7 @@ import {
   sampleRUM,
   waitForFirstImage,
 } from './aem.js';
+import { initSeason } from './season.js';
 
 /**
  * Builds hero block and prepends to main in a new section.
@@ -74,6 +75,7 @@ export function decorateMainEl(main) {
 async function loadEager(doc) {
   document.documentElement.lang = 'en';
   decorateTemplateAndTheme();
+  initSeason();
   const main = doc.querySelector('main');
   if (main) {
     decorateMainEl(main);
