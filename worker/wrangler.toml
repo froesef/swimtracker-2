@@ -1,0 +1,11 @@
+name = "swimtracker-api"
+main = "src/index.ts"
+compatibility_date = "2025-02-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "swimtracker"
+database_id = "1854f88e-84d4-4af5-bd2d-525890a8c905"

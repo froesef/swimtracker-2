@@ -1,0 +1,72 @@
+.pool-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.pool-card {
+  background: var(--color-white);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
+}
+
+.pool-card h3 {
+  font-size: 1rem;
+  margin: 0 0 var(--spacing-sm);
+  color: var(--color-text);
+}
+
+.occupancy-bar {
+  height: 20px;
+  background: var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: var(--spacing-sm);
+}
+
+.occupancy-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: 10px;
+}
+
+.occupancy-fill.level-0 {
+  background-color: var(--color-level-0);
+}
+
+.occupancy-fill.level-1 {
+  background-color: var(--color-level-1);
+}
+
+.occupancy-fill.level-2 {
+  background-color: var(--color-level-2);
+}
+
+.occupancy-fill.level-3 {
+  background-color: var(--color-level-3);
+}
+
+.occupancy-fill.level-4 {
+  background-color: var(--color-level-4);
+}
+
+.pool-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--body-font-size-s);
+  color: var(--color-text-light);
+}
+
+.pool-status-loading,
+.pool-status-empty,
+.pool-status-error {
+  text-align: center;
+  color: var(--color-text-light);
+  padding: var(--spacing-xl);
+  grid-column: 1 / -1;
+}
+
+.pool-status-error {
+  color: var(--color-level-4);
+}

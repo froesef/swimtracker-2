@@ -1,9 +1,5 @@
-.hlx/*
-coverage/*
-logs/*
-node_modules/*
-
-helix-importer-ui
-.DS_Store
-*.bak
-.idea
+node_modules/
+.wrangler/
+dist/
+.env
+da-token

@@ -1,20 +1,23 @@
-import { getMetadata } from '../../scripts/aem.js';
-import { loadFragment } from '../fragment/fragment.js';
-
 /**
  * loads and decorates the footer
  * @param {Element} block The footer block element
  */
 export default async function decorate(block) {
-  // load footer as fragment
-  const footerMeta = getMetadata('footer');
-  const footerPath = footerMeta ? new URL(footerMeta, window.location).pathname : '/footer';
-  const fragment = await loadFragment(footerPath);
+  // fetch footer content
+  const footerMeta = document.querySelector('head meta[name="footer"]');
+  const footerPath = footerMeta ? new URL(footerMeta.content, window.location).pathname : '/footer';
 
-  // decorate footer DOM
-  block.textContent = '';
-  const footer = document.createElement('div');
-  while (fragment.firstElementChild) footer.append(fragment.firstElementChild);
+  const resp = await fetch(`${footerPath}.plain.html`);
+  if (!resp.ok) {
+    // fallback: simple footer
+    block.innerHTML = `
+      <div class="footer-content">
+        <p>Data from <a href="https://www.stadt-zuerich.ch/ssd/de/index/sport/schwimmen.html" target="_blank" rel="noopener">Stadt Zurich</a> via CrowdMonitor</p>
+      </div>
+    `;
+    return;
+  }
 
-  block.append(footer);
+  const html = await resp.text();
+  block.innerHTML = html;
 }
