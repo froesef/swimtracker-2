@@ -90,10 +90,38 @@ function groupByPool(data) {
 }
 
 /**
+ * Get time axis config for a given hour range.
+ */
+function getTimeAxisConfig(hours) {
+  if (hours <= 1) return { unit: 'minute', stepSize: 10 };
+  if (hours <= 6) return { unit: 'hour', stepSize: 1 };
+  if (hours <= 12) return { unit: 'hour', stepSize: 2 };
+  if (hours <= 24) return { unit: 'hour', stepSize: 4 };
+  if (hours <= 48) return { unit: 'hour', stepSize: 8 };
+  return { unit: 'day', stepSize: 1 };
+}
+
+/**
+ * Get how many hours to fetch for a given visible window,
+ * so there's extra data to pan into.
+ */
+function getFetchHours(hours) {
+  if (hours <= 1) return 6;
+  if (hours <= 6) return 24;
+  if (hours <= 12) return 48;
+  if (hours <= 48) return 168;
+  return 336;
+}
+
+/**
  * Create a Chart.js line chart.
  */
-function createChart(canvas, datasets, yLabel, yMax) {
+function createChart(canvas, datasets, yLabel, yMax, hours) {
   const ctx = canvas.getContext('2d');
+  const timeConfig = getTimeAxisConfig(hours);
+  const now = Date.now();
+  const windowMin = now - hours * 60 * 60 * 1000;
+
   const config = {
     type: 'line',
     data: { datasets },
@@ -103,8 +131,13 @@ function createChart(canvas, datasets, yLabel, yMax) {
       scales: {
         x: {
           type: 'time',
+          min: windowMin,
+          max: now,
           time: {
+            unit: timeConfig.unit,
+            stepSize: timeConfig.stepSize,
             displayFormats: {
+              minute: 'HH:mm',
               hour: 'HH:mm',
               day: 'MMM d',
             },
@@ -114,12 +147,25 @@ function createChart(canvas, datasets, yLabel, yMax) {
         y: {
           min: 0,
           max: yMax,
+          ticks: {
+            precision: 0,
+            stepSize: yMax === 100 ? 20 : undefined,
+          },
           title: { display: true, text: yLabel },
         },
       },
       plugins: {
         legend: { position: 'top' },
         tooltip: { mode: 'index', intersect: false },
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: 'x',
+          },
+          limits: {
+            x: { minRange: 5 * 60 * 1000 },
+          },
+        },
       },
       interaction: {
         mode: 'nearest',
@@ -175,7 +221,8 @@ async function updateCharts(apiUrl, hours, state) {
   state.isUpdating = true;
 
   try {
-    const resp = await fetch(`${apiUrl}/api/history?hours=${hours}`);
+    const fetchH = getFetchHours(hours);
+    const resp = await fetch(`${apiUrl}/api/history?hours=${fetchH}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
 
@@ -186,8 +233,16 @@ async function updateCharts(apiUrl, hours, state) {
     const visitorDatasets = buildDatasets(pools, poolIds, 'visitors');
     const percentDatasets = buildDatasets(pools, poolIds, 'percent');
 
+    const timeConfig = getTimeAxisConfig(hours);
+    const now = Date.now();
+    const windowMin = now - hours * 60 * 60 * 1000;
+
     if (state.visitorsChart) {
       state.visitorsChart.data.datasets = visitorDatasets;
+      state.visitorsChart.options.scales.x.min = windowMin;
+      state.visitorsChart.options.scales.x.max = now;
+      state.visitorsChart.options.scales.x.time.unit = timeConfig.unit;
+      state.visitorsChart.options.scales.x.time.stepSize = timeConfig.stepSize;
       state.visitorsChart.update();
     } else {
       state.visitorsChart = createChart(
@@ -195,11 +250,16 @@ async function updateCharts(apiUrl, hours, state) {
         visitorDatasets,
         'Number of Visitors',
         undefined,
+        hours,
       );
     }
 
     if (state.percentChart) {
       state.percentChart.data.datasets = percentDatasets;
+      state.percentChart.options.scales.x.min = windowMin;
+      state.percentChart.options.scales.x.max = now;
+      state.percentChart.options.scales.x.time.unit = timeConfig.unit;
+      state.percentChart.options.scales.x.time.stepSize = timeConfig.stepSize;
       state.percentChart.update();
     } else {
       state.percentChart = createChart(
@@ -207,6 +267,7 @@ async function updateCharts(apiUrl, hours, state) {
         percentDatasets,
         'Occupancy %',
         100,
+        hours,
       );
     }
 
@@ -271,9 +332,11 @@ export default async function decorate(block) {
   percentContainer.appendChild(percentWrapper);
   block.appendChild(percentContainer);
 
-  // Load Chart.js and adapter, then render
+  // Load Chart.js, date adapter, and zoom plugin, then render
   await loadScript('https://cdn.jsdelivr.net/npm/chart.js');
   await loadScript('https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js');
+  await loadScript('https://cdn.jsdelivr.net/npm/hammerjs@2.0.8');
+  await loadScript('https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom');
   await updateCharts(apiUrl, currentHours, state);
 
   // Re-render when season changes
