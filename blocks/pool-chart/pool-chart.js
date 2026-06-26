@@ -156,7 +156,7 @@ function createChart(canvas, datasets, yLabel, yMax, hours) {
       },
       plugins: {
         legend: { position: 'top' },
-        tooltip: { mode: 'index', intersect: false },
+        tooltip: { mode: 'nearest', axis: 'xy', intersect: false },
         zoom: {
           pan: {
             enabled: true,
@@ -169,7 +169,7 @@ function createChart(canvas, datasets, yLabel, yMax, hours) {
       },
       interaction: {
         mode: 'nearest',
-        axis: 'x',
+        axis: 'xy',
         intersect: false,
       },
     },
