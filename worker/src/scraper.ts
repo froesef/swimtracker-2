@@ -8,6 +8,13 @@ export const POOLS: Record<string, string> = {
   'SSD-6': 'Leimbach',
   'fb012': 'Heuried',
   'BADI-1': 'Enge',
+  'LETZI-1': 'Letzigraben',
+  'seb6946': 'Mythenquai',
+  'seb6947': 'Tiefenbrunnen',
+  'seb6948': 'Wollishofen',
+  'flb6939': 'Oberer Letten',
+  'flb6940': 'Unterer Letten',
+  'flb8803': 'Unterer Letten (Flussteil)',
 };
 
 const TRACKED_POOL_IDS = new Set(Object.keys(POOLS));
